@@ -8,14 +8,15 @@ qdots = [0.,.010,.025,.050,.075,.100,.150,.200,.250] # W
 
 qdot_bg = 0.15 # W
 
-down = False
+down = False  # if True, switch off power at t=0.  if False, switch on
+             # power at t=0.
 
 capthex = 1.0 # K
 rho = 145. # kg/m^3 -- density of He-II at ~1 K
 v = 8.5/1000. # m^3 -- volume of He-II bottle
 m = 3. # dimensionless -- the GM exponent
 
-dx = 0.01 # m -- "length" of channel (hole)
+dx = 0.005 # m -- "length" of channel (hole)
 dy = dx # m -- side length of hole area
 ahole = dy*dy # m^2 -- effective area of hole
 
@@ -53,7 +54,7 @@ def capt_infty(qdot):
         ftinv_integral=ftinv_integral+deltacaptstep*ftinv_sciver(captprime)
         captprime=captprime+deltacaptstep
     return captprime
-        
+
 dt = .01 # s time step
 nsteps = 100000
 
@@ -65,9 +66,13 @@ for qdot in qdots:
 
     # First, calculate starting temperature by assuming it has equilibrated.
     if(down):
-        captstart=capt_infty(qdot_bg+qdot)
+        qdot_start=qdot_bg+qdot
+        qdot_end=qdot_bg
     else:
-        captstart=capt_infty(qdot_bg)
+        qdot_start=qdot_bg
+        qdot_end=qdot_bg+qdot
+        
+    captstart=capt_infty(qdot_start)
     print('Starting temperature is %f'%captstart)
 
     t = 0 # time
@@ -76,11 +81,11 @@ for qdot in qdots:
     ts = np.empty(nsteps)
     capts = np.empty(nsteps)
 
-    ftinv_integral=dx*((qdot_bg)/ahole)**m
+    ftinv_integral=dx*(qdot_start/ahole)**m
     for i in np.arange(nsteps):
         ts[i]=t
         capts[i]=capt
-        dcapt=dt*(qdot+qdot_bg-ahole*(ftinv_integral/dx)**(1/m))/(rho*v*c(capt))
+        dcapt=dt*(qdot_end-ahole*(ftinv_integral/dx)**(1/m))/(rho*v*c(capt))
         t=t+dt
         capt=capt+dcapt
         ftinv_integral=ftinv_integral+dcapt*ftinv_sciver(capt)
@@ -92,21 +97,21 @@ for qdot in qdots:
     popt,pcov=curve_fit(func,ts,capts)
     print(qdot)
     print(popt)
-    #plt.plot(ts,func(ts,*popt),'r-',label='fit: a=%5.3f, b=%5.3f, c=%5.3f' % tuple(popt))
+    plt.plot(ts,func(ts,*popt),'r-',label='fit: a=%5.3f, b=%5.3f, c=%5.3f' % tuple(popt))
     
     captend[iq]=capt
 
     # Calculate theoretical balance of qdot and ftinv integral
 
-    ftinv_integral=dx*((qdot_bg)/ahole)**m
-    ftinv_goal=dx*((qdot+qdot_bg)/ahole)**m
-    captprime=captstart
-    deltacaptstep=0.0001
-    while (ftinv_integral<ftinv_goal):
-        ftinv_integral=ftinv_integral+deltacaptstep*ftinv_sciver(captprime)
-        captprime=captprime+deltacaptstep
+    #ftinv_integral=dx*((qdot_bg)/ahole)**m
+    #ftinv_goal=dx*((qdot+qdot_bg)/ahole)**m
+    #captprime=captstart
+    #deltacaptstep=0.0001
+    #while (ftinv_integral<ftinv_goal):
+    #    ftinv_integral=ftinv_integral+deltacaptstep*ftinv_sciver(captprime)
+    #    captprime=captprime+deltacaptstep
 
-    captendthy[iq]=captprime
+    captendthy[iq]=capt_infty(qdot_end)
     iq=iq+1
 
 plt.xlabel('Time (s)')
