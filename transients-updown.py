@@ -20,8 +20,9 @@ dx = 0.005 # m -- "length" of channel (hole)
 dy = dx # m -- side length of hole area
 ahole = dy*dy # m^2 -- effective area of hole
 
-def func(t,a,b,c):
-    return a*np.exp(-t/b)+c
+def func(t,b,c):
+    global d
+    return d*np.exp(-t/b)+c*(1-np.exp(-t/b))
 
 # van Sciver's fit for c(T)
 def c(capt): # J/(kg*K)
@@ -94,10 +95,11 @@ for qdot in qdots:
     plt.plot(ts,capts,label='%4.3f W'%qdot)
 
     # fit curve
+    d=captstart
     popt,pcov=curve_fit(func,ts,capts)
     print(qdot)
     print(popt)
-    plt.plot(ts,func(ts,*popt),'r-',label='fit: a=%5.3f, b=%5.3f, c=%5.3f' % tuple(popt))
+    plt.plot(ts,func(ts,*popt),'r-',label='fit: b=%5.3f, c=%5.3f'%tuple(popt))
     
     captend[iq]=capt
 
